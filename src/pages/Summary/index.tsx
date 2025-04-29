@@ -48,15 +48,14 @@ function Summary() {
         Go to Landing
       </button>
 
-      <div className="flex h-1/2 flex-col items-center gap-8 rounded-lg bg-[#1C1E22] p-8 shadow-lg">
+      <div className="flex h-3/4 w-1/2 flex-col items-center gap-8 rounded-lg bg-[#1C1E22] p-8 shadow-lg">
         <p className="text-5xl font-bold text-white">
           Summarize your text here
         </p>
 
         <textarea
-          className="w-full rounded-lg border-2 border-[#4b1044] bg-[#121418] p-4 text-white"
+          className="h-full w-full rounded-lg border-2 border-[#4b1044] bg-[#121418] p-4 text-white"
           placeholder="Paste your text here..."
-          rows={10}
           onChange={(e) => setText(e.target.value)}
         />
 
