@@ -1,12 +1,18 @@
 import { Outlet, RouteObject, createBrowserRouter } from 'react-router-dom'
 
-import { Landing } from './pages'
+import { Landing, Summary } from './pages'
 
 const routes: RouteObject[] = [
   {
     path: '/',
     element: <Outlet />,
-    children: [{ index: true, element: <Landing /> }],
+    children: [
+      { index: true, element: <Landing /> },
+      {
+        path: 'summary',
+        element: <Summary />,
+      },
+    ],
   },
 ]
 
