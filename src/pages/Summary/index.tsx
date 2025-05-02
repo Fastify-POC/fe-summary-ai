@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { twMerge } from 'tailwind-merge'
 
@@ -12,15 +12,61 @@ function Summary() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
+  const summaryChunksRef = useRef<string[]>([])
+  const timeoutRef = useRef<number | null>(null)
+
   const handleSummarize = async () => {
     try {
       setLoading(true)
       setError('')
+      setSummary('')
+      summaryChunksRef.current = []
 
-      const response = await axios.post(import.meta.env.VITE_SUMMARY_ENDPOINT, {
-        text,
-      })
-      setSummary(response.data.summary)
+      const response = await fetch(
+        `${import.meta.env.VITE_API_ENDPOINT}/ai/summary`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text }),
+        },
+      )
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('Response body is not readable')
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) {
+          if (buffer) {
+            processChunk(buffer)
+          }
+          break
+        }
+
+        const chunk = decoder.decode(value, { stream: true })
+        buffer += chunk
+
+        const messages = buffer.split('\n\n')
+        buffer = messages.pop() || ''
+
+        if (messages.length > 0) {
+          processChunk(messages.join('\n\n'))
+        }
+      }
+
+      setLoading(false)
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(
@@ -34,10 +80,41 @@ function Summary() {
         setError('Failed to get summary')
       }
       console.error('Summarize error:', err)
-    } finally {
       setLoading(false)
     }
   }
+
+  const processChunk = (chunk: string) => {
+    const dataRegex = /data: ({.*?})/g
+    let match
+
+    while ((match = dataRegex.exec(chunk)) !== null) {
+      try {
+        const jsonData = JSON.parse(match[1])
+        if (jsonData.text) {
+          summaryChunksRef.current.push(jsonData.text)
+
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+          }
+
+          timeoutRef.current = window.setTimeout(() => {
+            setSummary(summaryChunksRef.current.join(''))
+          }, 50)
+        }
+      } catch (e) {
+        console.error('Error parsing JSON:', match[1], e)
+      }
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <div className="relative flex h-screen items-center justify-center bg-[#4b1044]">
@@ -70,7 +147,7 @@ function Summary() {
           Summarize
         </Button>
 
-        <div className="w-full rounded-lg border-2 border-[#4b1044] bg-[#121418] p-4 text-white">
+        <div className="w-full overflow-y-auto rounded-lg border-2 border-[#4b1044] bg-[#121418] p-4 text-white">
           <p className="text-lg font-semibold">Summary:</p>
           {error ? (
             <p className="mt-2 text-red-400">{error}</p>
@@ -78,7 +155,7 @@ function Summary() {
             <p className="mt-2">{summary}</p>
           ) : (
             <p className="mt-2">This is where the summary will appear.</p>
-          )}
+          )}{' '}
         </div>
       </div>
     </div>
