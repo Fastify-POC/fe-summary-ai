@@ -131,9 +131,10 @@ function Summary() {
         </p>
 
         <textarea
-          className="h-full w-full rounded-lg border-2 border-[#4b1044] bg-[#121418] p-4 text-white"
+          className="w-full rounded-lg border-2 border-[#4b1044] bg-[#121418] p-4 text-white"
           placeholder="Paste your text here..."
           onChange={(e) => setText(e.target.value)}
+          rows={6}
         />
 
         <Button
